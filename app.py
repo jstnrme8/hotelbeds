@@ -1,67 +1,36 @@
-from flask import Flask, request, jsonify
-import hashlib
-import time
-import requests
-from flask_cors import CORS  # Allows frontend to call API
 import os
-from dotenv import load_dotenv
+import requests
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend
+CORS(app)
 
-# Load environment variables
-load_dotenv()
-
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
-
-def get_signature():
-    timestamp = str(int(time.time()))
-    signature = hashlib.sha256((API_KEY + API_SECRET + timestamp).encode()).hexdigest()
-    return signature, timestamp
+API_KEY = os.getenv("HOTELBEDS_API_KEY")
+SECRET = os.getenv("HOTELBEDS_SECRET")
 
 @app.route("/search-hotels", methods=["GET"])
 def search_hotels():
-    signature, timestamp = get_signature()
+    try:
+        if not API_KEY or not SECRET:
+            return jsonify({"error": "Missing API keys!"}), 500
+
+        # Example request to Hotelbeds API
+        headers = {
+            "Api-key": API_KEY,
+            "X-Signature": SECRET,
+            "Accept": "application/json",
+        }
+        
+        response = requests.get("https://api.test.hotelbeds.com/hotel-api/3.0/hotels", headers=headers)
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"Hotelbeds API error: {response.status_code}", "details": response.text}), 500
+        
+        return response.json()
     
-    headers = {
-        "Api-key": API_KEY,
-        "X-Signature": signature,
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "stay": {"checkIn": "2025-04-01", "checkOut": "2025-04-05"},
-        "occupancies": [{"rooms": 1, "adults": 2, "children": 0}],
-        "destination": {"code": "BCN"}  # Example for Barcelona
-    }
-
-    url = "https://api.test.hotelbeds.com/hotel-api/1.0/hotels"
-    response = requests.post(url, json=payload, headers=headers)
-    
-    data = response.json()
-
-    # Debugging: Print response
-    print("Hotelbeds Response:", data)
-
-    # Extract only the hotels list and limit to 10
-    hotels = data.get("hotels", {}).get("hotels", [])[:10]
-
-    formatted_hotels = []
-    for hotel in hotels:
-        formatted_hotels.append({
-            "name": hotel.get("name", "No Name"),
-            "address": hotel.get("destinationName", "Unknown Address"),
-            "price": hotel.get("minRate", "N/A"),
-            "currency": hotel.get("currency", "N/A"),
-            "latitude": hotel.get("latitude"),
-            "longitude": hotel.get("longitude")
-        })
-
-    return jsonify({"hotels": formatted_hotels})
-
-
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
