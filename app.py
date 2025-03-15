@@ -1,7 +1,12 @@
+from flask import Flask, jsonify
+from flask_cors import CORS  # ✅ Import CORS
 import os
 import requests
 import time
 import hashlib
+
+app = Flask(__name__)
+CORS(app)  # ✅ Enable CORS for all routes
 
 API_KEY = os.getenv("HOTELBEDS_API_KEY")
 SECRET = os.getenv("HOTELBEDS_SECRET")
@@ -33,3 +38,6 @@ def search_hotels():
     
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
