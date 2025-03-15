@@ -1,13 +1,16 @@
 import os
 import requests
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
+import time
+import hashlib
 
 API_KEY = os.getenv("HOTELBEDS_API_KEY")
 SECRET = os.getenv("HOTELBEDS_SECRET")
+
+def generate_signature():
+    timestamp = str(int(time.time()))  # Current UNIX timestamp
+    raw_signature = API_KEY + SECRET + timestamp
+    signature = hashlib.sha256(raw_signature.encode()).hexdigest()
+    return signature
 
 @app.route("/search-hotels", methods=["GET"])
 def search_hotels():
@@ -15,10 +18,9 @@ def search_hotels():
         if not API_KEY or not SECRET:
             return jsonify({"error": "Missing API keys!"}), 500
 
-        # Example request to Hotelbeds API
         headers = {
             "Api-key": API_KEY,
-            "X-Signature": SECRET,
+            "X-Signature": generate_signature(),
             "Accept": "application/json",
         }
         
@@ -31,6 +33,3 @@ def search_hotels():
     
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(debug=True)
