@@ -42,39 +42,59 @@
 function fetchHotels() {
     document.getElementById("hotels").innerHTML = '<p class="text-center">Loading...</p>';
 
-    const BACKEND_URL = "https://hotelbeds.onrender.com";
-    fetch(`${BACKEND_URL}/search-hotels`)
-        .then(response => response.json())
-        .then(data => {
-            console.log("API Response:", data);
-
-            let hotelsDiv = document.getElementById("hotels");
-            hotelsDiv.innerHTML = "";
-
-            if (data.hotels && data.hotels.length > 0) {
-                data.hotels.forEach(hotel => {
-                    let hotelCard = document.createElement("div");
-                    hotelCard.classList.add("col-md-6");
-
-                    hotelCard.innerHTML = `
-                        <div class="hotel-card">
-                            <h3>${hotel.name}</h3>
-                            <p><strong>Address:</strong> ${hotel.address}</p>
-                            <p><strong>Price:</strong> ${hotel.price} ${hotel.currency}</p>
-                            <p><strong>Location:</strong> ${hotel.latitude}, ${hotel.longitude}</p>
-                        </div>
-                    `;
-                    hotelsDiv.appendChild(hotelCard);
-                });
-            } else {
-                hotelsDiv.innerHTML = '<p class="text-center">No hotels found.</p>';
-            }
+    fetch("https://hotelbeds.onrender.com/search-hotels", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            destination: "BCN",
+            check_in: "2025-04-01",
+            check_out: "2025-04-05",
+            adults: 2,
+            rooms: 1
         })
-        .catch(error => {
-            document.getElementById("hotels").innerHTML = '<p class="text-center text-danger">Error fetching hotels.</p>';
-            console.error("Fetch error:", error);
+    })
+    .then(response => response.json())
+    .then(data => {
+    console.log("Full API Response:", data); // 🔍 Debugging the response
+
+    const hotelsContainer = document.getElementById("hotels");
+    hotelsContainer.innerHTML = ""; // Clear previous results
+
+    if (data.hotels && data.hotels.length > 0) {
+        data.hotels.forEach(hotel => {
+            console.log("Hotel Data:", hotel); // 🔍 Debugging each hotel
+
+            // Convert "3 STARS" to an integer (e.g., "3 STARS" -> 3)
+            let stars = parseInt(hotel.categoryName) || 0;
+            let starIcons = "⭐".repeat(stars); // Repeat stars based on rating
+
+            let hotelCard = `
+                <div class="col-md-4">
+                    <div class="hotel-card">
+                        <h3>${hotel.name || "No Name"}</h3>
+                        <p><strong>City:</strong> ${hotel.destinationName || "N/A"}</p>
+                        <p><strong>Rating:</strong> ${starIcons || "No rating"}</p>
+                        <p><strong>Min Price:</strong> €${hotel.minRate || "Not available"}</p>
+                        <p><strong>Max Price:</strong> €${hotel.maxRate || "Not available"}</p>
+                    </div>
+                </div>
+            `;
+            hotelsContainer.innerHTML += hotelCard;
         });
+    } else {
+        hotelsContainer.innerHTML = '<p class="text-center">No hotels found.</p>';
+    }
+})
+
+
+    .catch(error => {
+        document.getElementById("hotels").innerHTML = '<p class="text-center text-danger">Error fetching hotels.</p>';
+        console.error("Fetch error:", error);
+    });
 }
+
 </script>
 
 </body>
